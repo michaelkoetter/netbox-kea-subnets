@@ -1,0 +1,83 @@
+{#
+    The following variables are available:
+
+    - prefix
+    - pools (list of IP Range)
+    - reservations (list of IP Address)
+
+    This template is parsed as YAML (which makes it a bit easier to author), 
+    but you could also use plain JSON (YAML is a superset of JSON).
+#}
+
+
+
+{% macro option_data(object) -%}
+[
+  {% if object.custom_fields.dhcp_default_gateway %}
+  { 
+    name: routers, 
+    data: "{{ object.custom_fields.dhcp_default_gateway.address | ip }}" 
+  },
+  {% endif %}
+  {% if object.custom_fields.dhcp_dns_servers %}
+  {
+    name: domain-name-servers,
+    data: "{{ object.custom_fields.dhcp_dns_servers | map(attribute='address') | map('ip') | join(',') }}" 
+  },
+  {% endif %}
+  {% if object.custom_fields.dhcp_domain %}
+  {
+    name: domain-name,
+    data: "{{ object.custom_fields.dhcp_domain }}" 
+  },
+  {% endif %}
+  {% if object.custom_fields.dhcp_mtu %}
+  {
+    name: interface-mtu,
+    data: "{{ object.custom_fields.dhcp_mtu }}"
+  },
+  {% endif %}
+  {% if object.custom_fields.dhcp_ntp_servers %}
+  {
+    name: time-servers,
+    data: "{{ object.custom_fields.dhcp_ntp_servers | map(attribute='address') | map('ip') | join(',') }}" 
+  },
+  {% endif %}
+
+  {% if object.custom_fields.dhcp_option_data %}
+  {{ object.custom_fields.dhcp_option_data | trim(' []') }}
+  {% endif %}
+]
+{%- endmacro %}
+
+---
+subnet: "{{ prefix.prefix }}"
+option-data: {{ option_data(prefix) }}
+pools: [
+{% for pool in pools %}
+  {
+    pool: "{{ pool.start_address | ip }} - {{ pool.end_address | ip }}",
+    option-data: {{ option_data(pool) }},
+  },
+{% endfor %}
+]
+
+reservations: [
+{% for reservation in reservations %}
+  {
+    hw-address: "{{ reservation.assigned_object.mac_address }}",
+    ip-address: "{{ reservation.address | ip }}",
+    option-data: {{ option_data(reservation) }},
+    user-context: {
+      netbox: {
+        interface: "{{ reservation.assigned_object.name }}",
+        {% if reservation.assigned_object.device %}
+        device: "{{ reservation.assigned_object.device.name }}",
+        {% elif reservation.assigned_object.virtual_machine %}
+        virtual_machine: "{{ reservation.assigned_object.virtual_machine.name }}",
+        {% endif %}
+      }
+    }
+  },
+{% endfor %}
+]
