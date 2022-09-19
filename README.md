@@ -1,10 +1,21 @@
 # Configure Kea DHCP Subnets using Netbox
 
+[![Build Docker Image](https://github.com/michaelkoetter/netbox-kea-subnets/actions/workflows/build-image.yml/badge.svg)](https://github.com/michaelkoetter/netbox-kea-subnets/actions/workflows/build-image.yml)
+[![image-version](https://img.shields.io/static/v1?logo=docker&label=Docker+Hub&message=mkoetter/netbox-kea-subnets&color=informational)](https://hub.docker.com/r/mkoetter/netbox-kea-subnets)
+
 This script fetches data from Netbox to create Kea subnet configuration from Prefixes, IP Ranges and IP Addresses.
 
 A Jinja2 template is used to render each subnet. It can be customized to add additional data, e.g. from Netbox custom fields (see example in `templates`).
 
-## Installation
+## Docker Images
+
+Docker Images are automatically built for new releases.
+
+```bash
+docker run --rm mkoetter/netbox-kea-subnets:latest --help
+```
+
+## Development
 
 ```bash
 python3 -m venv venv/
