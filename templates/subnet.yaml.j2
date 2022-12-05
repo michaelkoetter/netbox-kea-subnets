@@ -1,6 +1,7 @@
 {#
     The following variables are available:
 
+    - id (Kea subnet ID, derived from prefix)
     - prefix
     - pools (list of IP Range)
     - reservations (list of IP Address)
@@ -51,6 +52,7 @@
 {%- endmacro %}
 
 ---
+id: {{ id }}
 subnet: "{{ prefix.prefix }}"
 option-data: {{ option_data(prefix) }}
 pools: [

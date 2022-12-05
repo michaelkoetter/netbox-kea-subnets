@@ -8,6 +8,7 @@ import json
 import yaml
 import jinja2
 import dotenv
+import zlib
 
 dotenv.load_dotenv()
 
@@ -36,7 +37,7 @@ def main(url, token, parent_prefix, ip_range_role, config, template_path):
     env.filters['ip'] = filter_ip
 
     nb = pynetbox.api(url, token)
-    prefixes = nb.ipam.prefixes.filter(status='active', within=parent_prefix)
+    prefixes = nb.ipam.prefixes.filter(status='active', within_include=parent_prefix)
     ip_ranges = list(nb.ipam.ip_ranges.filter(status='active', role=ip_range_role))
     ip_addresses = list(nb.ipam.ip_addresses.filter(status='dhcp', parent=parent_prefix))
     subnets = []
@@ -51,12 +52,17 @@ def main(url, token, parent_prefix, ip_range_role, config, template_path):
         for ip_address in filter(lambda a : netaddr.IPNetwork(a.address).ip in _prefix, ip_addresses):
             reservations.append(ip_address)
         
-        subnet_template = env.get_template('subnet.yaml.j2')
-        subnets.append(yaml.safe_load(subnet_template.render(
-            prefix=prefix,
-            pools=pools,
-            reservations=reservations
-        )))
+        if pools:
+            subnet_template = env.get_template('subnet.yaml.j2')
+            subnets.append(yaml.safe_load(subnet_template.render(
+                # The Kea subnet ID is a 32 bit unsigned int. 
+                # We assume that CRC32 of the prefix is sufficiently unique.
+                id=zlib.crc32(bytes(_prefix.ip)) % (1<<32),
+
+                prefix=prefix,
+                pools=pools,
+                reservations=reservations
+            )))
     
     if (config):
         config_json = yaml.safe_load(open(config, 'r'))
